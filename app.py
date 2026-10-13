@@ -265,30 +265,131 @@ elif page == "Live Match":
 
 # ---------------- TOP PLAYER STATS PAGE ----------------
 
+
 elif page == "Top Player Stats":
     st.title("📊 Top Player Stats")
-    st.caption("Explore cricket player statistics")
 
-    st.info(
-        "This page needs a supported Cricbuzz statistics endpoint "
-        "or player-statistics data to display verified leaderboards."
+    player_name = st.text_input(
+        "Search Player",
+        placeholder="Enter a player name, e.g. Virat Kohli"
     )
 
-    category = st.selectbox(
-        "Choose statistics",
-        [
-            "Most Runs",
-            "Highest Individual Score",
-            "Most Wickets"
-        ]
-    )
+    if st.button("Search Player"):
+        if not player_name.strip():
+            st.warning("Please enter a player name.")
+        else:
+            try:
+                headers = {
+                    "X-RapidAPI-Key": st.secrets["RAPIDAPI_KEY"],
+                    "X-RapidAPI-Host": st.secrets.get(
+                        "RAPIDAPI_HOST",
+                        "cricbuzz-cricket.p.rapidapi.com"
+                    )
+                }
 
-    st.write(f"**Selected category:** {category}")
+                response = requests.get(
+                    "https://cricbuzz-cricket.p.rapidapi.com/"
+                    "stats/v1/player/search",
+                    headers=headers,
+                    params={"pl": player_name.strip()},
+                    timeout=20
+                )
+                response.raise_for_status()
+                data = response.json()
 
-    st.warning(
-        "The statistics table will appear here after we connect "
-        "the correct API endpoint and map its response fields."
-    )
+                players = data.get("player", [])
+
+                if not players:
+                    st.warning(
+                        "No players found. Try another name."
+                    )
+                else:
+                    player_options = {
+                        f"{p.get('name', 'Unknown')} "
+                        f"(ID: {p.get('id')})": p
+                        for p in players
+                        if p.get("id") is not None
+                    }
+
+                    if player_options:
+                        selected = st.selectbox(
+                            "Select Player",
+                            list(player_options.keys())
+                        )
+                        player = player_options[selected]
+                        player_id = player["id"]
+
+                        st.subheader(
+                            player.get("name", "Player Statistics")
+                        )
+
+                        tab1, tab2 = st.tabs(
+                            ["Batting Statistics", "Bowling Statistics"]
+                        )
+
+                        for tab, stat_type in [
+                            (tab1, "batting"),
+                            (tab2, "bowling")
+                        ]:
+                            with tab:
+                                url = (
+                                    "https://cricbuzz-cricket.p."
+                                    "rapidapi.com/stats/v1/player/"
+                                    f"{player_id}/{stat_type}"
+                                )
+
+                                result = requests.get(
+                                    url,
+                                    headers=headers,
+                                    timeout=20
+                                )
+                                result.raise_for_status()
+                                stats = result.json()
+
+                                rows = []
+                                for block in stats.get("values", []):
+                                    values = block.get("values", [])
+                                    if values:
+                                        rows.append({
+                                            "Statistic": values[0],
+                                            "Test": values[1]
+                                                if len(values) > 1 else "-",
+                                            "ODI": values[2]
+                                                if len(values) > 2 else "-",
+                                            "T20": values[3]
+                                                if len(values) > 3 else "-",
+                                            "IPL": values[4]
+                                                if len(values) > 4 else "-"
+                                        })
+
+                                if rows:
+                                    st.dataframe(
+                                        pd.DataFrame(rows),
+                                        use_container_width=True,
+                                        hide_index=True
+                                    )
+                                else:
+                                    st.info(
+                                        "No statistics returned for "
+                                        f"this player's {stat_type}."
+                                    )
+                    else:
+                        st.warning("No valid player IDs were returned.")
+
+            except KeyError:
+                st.error(
+                    "RAPIDAPI_KEY is missing from Streamlit Secrets."
+                )
+            except requests.exceptions.HTTPError as error:
+                st.error(
+                    f"API request failed: {error}. Check your "
+                    "subscription and API endpoint access."
+                )
+            except requests.exceptions.RequestException as error:
+                st.error(f"Connection error: {error}")
+            except (ValueError, TypeError) as error:
+                st.error(f"Could not process the API response: {error}")
+
 
 
 # ---------------- SQL ANALYTICS PAGE ----------------
