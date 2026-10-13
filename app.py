@@ -292,17 +292,100 @@ elif page == "Top Player Stats":
 
 
 # ---------------- SQL ANALYTICS PAGE ----------------
+
 elif page == "SQL Queries & Analytics":
     st.title("🗄️ SQL Queries & Analytics")
-    st.info(
-        "Your SQL database connection and analytics queries "
-        "must be connected to display query results."
+    st.write("Explore cricket match data using SQL analytics.")
+
+    queries = {
+        "1. Total Matches": """
+            SELECT COUNT(*) AS total_matches
+            FROM matches
+        """,
+        "2. Matches by Format": """
+            SELECT match_format, COUNT(*) AS total_matches
+            FROM matches
+            GROUP BY match_format
+        """,
+        "3. Matches by Status": """
+            SELECT state, COUNT(*) AS total_matches
+            FROM matches
+            GROUP BY state
+        """,
+        "4. Teams Participating": """
+            SELECT team1 AS team FROM matches
+            UNION
+            SELECT team2 AS team FROM matches
+        """,
+        "5. Matches by Venue": """
+            SELECT venue, COUNT(*) AS total_matches
+            FROM matches
+            GROUP BY venue
+        """
+    }
+
+    selected_query = st.selectbox(
+        "Select an SQL query",
+        list(queries.keys())
     )
 
+    st.code(queries[selected_query], language="sql")
+
+    st.info(
+        "These queries assume your MySQL database contains a "
+        "'matches' table with the listed columns. Database execution "
+        "will be enabled after we configure a reachable database."
+    )
+
+
 # ---------------- CRUD PAGE ----------------
+
 elif page == "CRUD Operations":
     st.title("✏️ CRUD Operations")
-    st.info(
-        "Create, Read, Update and Delete forms will be added "
-        "after the database connection is configured."
-    )
+    st.write("Manage cricket match records.")
+
+    if df.empty:
+        st.warning("No CSV data available.")
+    else:
+        operation = st.selectbox(
+            "Choose operation",
+            ["Read", "Create", "Update", "Delete"]
+        )
+
+        if operation == "Read":
+            st.subheader("View Match Records")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+        elif operation == "Create":
+            st.subheader("Add a Match Record")
+
+            with st.form("create_match_form"):
+                match_id = st.text_input("Match ID")
+                series_name = st.text_input("Series Name")
+                team1 = st.text_input("Team 1")
+                team2 = st.text_input("Team 2")
+                match_format = st.selectbox(
+                    "Match Format", ["Test", "ODI", "T20"]
+                )
+
+                submitted = st.form_submit_button("Add Match")
+
+                if submitted:
+                    st.info(
+                        "Form submitted. Saving records requires a "
+                        "configured writable database."
+                    )
+
+        elif operation == "Update":
+            st.subheader("Update a Match Record")
+            st.info(
+                "Update form requires a writable database connection "
+                "to save changes."
+            )
+
+        elif operation == "Delete":
+            st.subheader("Delete a Match Record")
+            st.info(
+                "Delete operation requires a writable database connection."
+            )
+
