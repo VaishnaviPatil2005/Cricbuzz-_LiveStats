@@ -1,2 +1,6 @@
 
+streamlit
+pandas
+requests
 mysql-connector-python
+plotly
