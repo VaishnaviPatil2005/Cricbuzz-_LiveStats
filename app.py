@@ -291,7 +291,7 @@ elif page == "Top Player Stats":
                     "https://cricbuzz-cricket.p.rapidapi.com/"
                     "stats/v1/player/search",
                     headers=headers,
-                    params={"pl": player_name.strip()},
+                    params={"plrN": player_name.strip()},
                     timeout=20
                 )
                 response.raise_for_status()
