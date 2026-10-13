@@ -264,12 +264,32 @@ elif page == "Live Match":
 
 
 # ---------------- TOP PLAYER STATS PAGE ----------------
+
 elif page == "Top Player Stats":
     st.title("📊 Top Player Stats")
+    st.caption("Explore cricket player statistics")
+
     st.info(
-        "Batting and bowling leaderboards require player statistics "
-        "from the Cricbuzz API or database."
+        "This page needs a supported Cricbuzz statistics endpoint "
+        "or player-statistics data to display verified leaderboards."
     )
+
+    category = st.selectbox(
+        "Choose statistics",
+        [
+            "Most Runs",
+            "Highest Individual Score",
+            "Most Wickets"
+        ]
+    )
+
+    st.write(f"**Selected category:** {category}")
+
+    st.warning(
+        "The statistics table will appear here after we connect "
+        "the correct API endpoint and map its response fields."
+    )
+
 
 # ---------------- SQL ANALYTICS PAGE ----------------
 elif page == "SQL Queries & Analytics":
