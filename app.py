@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+import requests
 
 st.set_page_config(
     page_title="Cricbuzz LiveStats",
@@ -153,26 +154,114 @@ if page == "Home":
         )
 
 # ---------------- LIVE MATCH PAGE ----------------
+
 elif page == "Live Match":
     st.title("🏏 Live Match")
-    st.info("Live API integration and detailed scorecards are not connected yet.")
+    st.caption("Live cricket updates powered by Cricbuzz API")
 
-    if not df.empty:
-        if "state" in df.columns:
-            live_df = df[
-                df["state"].astype(str).str.contains(
-                    "live|in progress", case=False, na=False
-                )
-            ]
-            if not live_df.empty:
-                st.dataframe(live_df, use_container_width=True, hide_index=True)
-            else:
-                st.warning(
-                    "No matches identified as live in the CSV. "
-                    "Connect the Cricbuzz API for current live scores."
-                )
+    if st.button("🔄 Refresh Live Matches"):
+        st.cache_data.clear()
+
+    @st.cache_data(ttl=60)
+    def get_live_matches():
+        url = "https://cricbuzz-cricket.p.rapidapi.com/matches/v1/live"
+
+        headers = {
+            "X-RapidAPI-Key": st.secrets["RAPIDAPI_KEY"],
+            "X-RapidAPI-Host": st.secrets.get(
+                "RAPIDAPI_HOST",
+                "cricbuzz-cricket.p.rapidapi.com"
+            )
+        }
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=20
+        )
+        response.raise_for_status()
+        return response.json()
+
+    try:
+        data = get_live_matches()
+        matches = []
+
+        # Extract matches from the API response
+        for match_type in data.get("typeMatches", []):
+            for series in match_type.get("seriesMatches", []):
+                wrapper = series.get("seriesAdWrapper", {})
+                for item in wrapper.get("matches", []):
+                    info = item.get("matchInfo", {})
+                    score = item.get("matchScore", {})
+
+                    if info:
+                        matches.append({
+                            "info": info,
+                            "score": score
+                        })
+
+        if not matches:
+            st.info("No live matches were returned by the API.")
         else:
-            st.warning("The CSV has no state column to identify live matches.")
+            st.success(f"Found {len(matches)} live match listings.")
+
+            for match in matches:
+                info = match["info"]
+                score = match["score"]
+
+                team1 = info.get("team1", {}).get(
+                    "teamName", "Team 1"
+                )
+                team2 = info.get("team2", {}).get(
+                    "teamName", "Team 2"
+                )
+
+                st.subheader(f"{team1} vs {team2}")
+                st.write(
+                    f"**Match:** {info.get('matchDesc', 'Cricket Match')}"
+                )
+                st.write(
+                    f"**Format:** {info.get('matchFormat', 'N/A')}"
+                )
+                st.write(
+                    f"**Venue:** "
+                    f"{info.get('venueInfo', {}).get('ground', 'N/A')}, "
+                    f"{info.get('venueInfo', {}).get('city', '')}"
+                )
+                st.write(
+                    f"**Status:** {info.get('status', 'Status unavailable')}"
+                )
+
+                for team_key, team_name in [
+                    ("team1Score", team1),
+                    ("team2Score", team2)
+                ]:
+                    team_score = score.get(team_key, {})
+                    for innings_key, innings in team_score.items():
+                        if isinstance(innings, dict):
+                            st.write(
+                                f"**{team_name}** — "
+                                f"{innings.get('runs', 0)}/"
+                                f"{innings.get('wickets', 0)} "
+                                f"({innings.get('overs', 0)} overs)"
+                            )
+
+                st.divider()
+
+    except KeyError:
+        st.error(
+            "RAPIDAPI_KEY is missing. Check your Streamlit Cloud Secrets."
+        )
+    except requests.exceptions.HTTPError as error:
+        st.error(
+            f"The Cricbuzz API returned an HTTP error: {error}. "
+            "Check your API key, subscription and endpoint access."
+        )
+    except requests.exceptions.RequestException as error:
+        st.error(f"Could not connect to Cricbuzz API: {error}")
+    except Exception as error:
+        st.error(f"Could not load match data: {error}")
+
 
 # ---------------- TOP PLAYER STATS PAGE ----------------
 elif page == "Top Player Stats":
