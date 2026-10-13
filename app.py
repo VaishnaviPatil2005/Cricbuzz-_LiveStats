@@ -394,50 +394,70 @@ elif page == "Top Player Stats":
 
 # ---------------- SQL ANALYTICS PAGE ----------------
 
+```python
 elif page == "SQL Queries & Analytics":
-    st.title("🗄️ SQL Queries & Analytics")
-    st.write("Explore cricket match data using SQL analytics.")
-
-    queries = {
-        "1. Total Matches": """
-            SELECT COUNT(*) AS total_matches
-            FROM matches
-        """,
-        "2. Matches by Format": """
-            SELECT match_format, COUNT(*) AS total_matches
-            FROM matches
-            GROUP BY match_format
-        """,
-        "3. Matches by Status": """
-            SELECT state, COUNT(*) AS total_matches
-            FROM matches
-            GROUP BY state
-        """,
-        "4. Teams Participating": """
-            SELECT team1 AS team FROM matches
-            UNION
-            SELECT team2 AS team FROM matches
-        """,
-        "5. Matches by Venue": """
-            SELECT venue, COUNT(*) AS total_matches
-            FROM matches
-            GROUP BY venue
-        """
-    }
-
-    selected_query = st.selectbox(
-        "Select an SQL query",
-        list(queries.keys())
-    )
-
-    st.code(queries[selected_query], language="sql")
+    st.title("📊 SQL Queries & Analytics")
 
     st.info(
-        "These queries assume your MySQL database contains a "
-        "'matches' table with the listed columns. Database execution "
-        "will be enabled after we configure a reachable database."
+        "Analytics are calculated from cricbuzz_matches.csv. "
+        "Connect a hosted MySQL database to execute SQL queries directly."
     )
 
+    df = pd.read_csv("cricbuzz_matches.csv")
+    df.columns = df.columns.str.strip()
+
+    st.subheader("1. Total Matches")
+    st.metric("Total Matches", len(df))
+
+    st.subheader("2. Matches by Format")
+    if "match_format" in df.columns:
+        st.dataframe(
+            df["match_format"].value_counts().reset_index()
+            .rename(columns={
+                "match_format": "Format",
+                "count": "Matches"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.subheader("3. Matches by Status")
+    if "status" in df.columns:
+        st.dataframe(
+            df["status"].value_counts().reset_index()
+            .rename(columns={
+                "status": "Status",
+                "count": "Matches"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.subheader("4. Matches by Team")
+    team_counts = pd.concat([
+        df["team1"].dropna(),
+        df["team2"].dropna()
+    ]).value_counts().reset_index()
+    team_counts.columns = ["Team", "Matches"]
+
+    st.dataframe(
+        team_counts,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.subheader("5. Matches by Venue")
+    if "venue" in df.columns:
+        st.dataframe(
+            df["venue"].value_counts().head(10).reset_index()
+            .rename(columns={
+                "venue": "Venue",
+                "count": "Matches"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+```
 
 # ---------------- CRUD PAGE ----------------
 
