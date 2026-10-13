@@ -394,7 +394,6 @@ elif page == "Top Player Stats":
 
 # ---------------- SQL ANALYTICS PAGE ----------------
 
-```python
 elif page == "SQL Queries & Analytics":
     st.title("📊 SQL Queries & Analytics")
 
@@ -457,7 +456,6 @@ elif page == "SQL Queries & Analytics":
             use_container_width=True,
             hide_index=True
         )
-```
 
 # ---------------- CRUD PAGE ----------------
 
